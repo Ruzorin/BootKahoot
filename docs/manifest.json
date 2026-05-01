@@ -1,7 +1,7 @@
 {
   "name": "BootKahoot Mobile",
   "short_name": "BootKahoot",
-  "description": "AI-Powered Kahoot Bot — DAÜ AI Summit '26",
+  "description": "AI-Powered Kahoot Bot",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",

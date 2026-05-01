@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#0a0a0f">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="description" content="AI-Powered Kahoot Bot — DAÜ AI Summit 26">
+<meta name="description" content="AI-Powered Kahoot Bot">
 <title>BootKahoot Mobile</title>
 <link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -15,33 +15,25 @@
   --bg:#0a0a0f;--card:rgba(255,255,255,.06);--card-border:rgba(255,255,255,.1);
   --text:#f1f5f9;--muted:#94a3b8;--purple:#7c3aed;--cyan:#06b6d4;
   --green:#10b981;--warn:#ef476f;
-  --kred:#e21b3c;--kblue:#1368ce;--kyellow:#ffa602;--kgreen:#26890c;
 }
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);
   min-height:100dvh;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 .screen{display:none;flex-direction:column;min-height:100dvh;padding:12px;gap:10px}
 .screen.active{display:flex}
-
-/* Cards */
 .card{background:var(--card);border:1px solid var(--card-border);border-radius:16px;
   padding:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .card h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
   margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .card h2 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-
-/* Inputs */
 input[type=text],input[type=password],select{width:100%;padding:10px 12px;border-radius:10px;
   border:1px solid var(--card-border);background:rgba(0,0,0,.4);color:var(--text);
   font-size:14px;font-family:inherit;outline:none;transition:border .2s}
 input:focus,select:focus{border-color:var(--purple)}
 label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
-
-/* Buttons */
 .btn{padding:12px;border:none;border-radius:12px;font-family:inherit;font-weight:700;
   font-size:14px;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:1px}
 .btn-primary{background:linear-gradient(135deg,var(--purple),#9333ea);color:#fff}
 .btn-primary:active{transform:scale(.97);filter:brightness(1.2)}
-.btn-danger{background:var(--warn);color:#fff}
 .btn-ghost{background:transparent;border:1px solid var(--card-border);color:var(--text)}
 .btn-turbo{background:linear-gradient(135deg,#ff6d00,#ff9100);color:#000;font-size:16px}
 .btn-turbo.on{background:linear-gradient(135deg,var(--warn),#c2185b);animation:pulse-glow 1.5s infinite}
@@ -51,65 +43,57 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
   box-shadow:0 0 30px rgba(124,58,237,.4);transition:all .15s}
 .btn-capture:active{transform:scale(.9);box-shadow:0 0 50px rgba(124,58,237,.7)}
 .btn-capture:disabled{opacity:.5;pointer-events:none}
-
-/* Camera */
-.cam-wrap{position:relative;border-radius:16px;overflow:hidden;background:#000;
-  aspect-ratio:4/3;width:100%}
+.btn-upload{padding:14px;border:2px dashed var(--purple);border-radius:14px;background:rgba(124,58,237,.08);
+  color:var(--purple);font-size:15px;font-weight:700;cursor:pointer;text-align:center;
+  transition:all .15s;font-family:inherit}
+.btn-upload:active{background:rgba(124,58,237,.2);transform:scale(.97)}
+.cam-wrap{position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:4/3;width:100%}
 .cam-wrap video{width:100%;height:100%;object-fit:cover}
-.cam-overlay{position:absolute;inset:0;border:3px solid rgba(124,58,237,.5);
-  border-radius:16px;pointer-events:none}
+.cam-overlay{position:absolute;inset:0;border:3px solid rgba(124,58,237,.5);border-radius:16px;pointer-events:none}
 .cam-badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.7);
-  padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;
-  display:flex;align-items:center;gap:4px}
-.cam-badge .live-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;
-  animation:blink 1s infinite}
-
-/* Answer Overlay */
+  padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.cam-badge .live-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;animation:blink 1s infinite}
+.img-preview{border-radius:16px;overflow:hidden;background:#000;width:100%;max-height:260px;
+  display:flex;align-items:center;justify-content:center}
+.img-preview img{width:100%;height:100%;object-fit:contain}
+.img-preview .placeholder{color:var(--muted);font-size:13px;padding:40px;text-align:center}
 #answerOverlay{position:fixed;inset:0;z-index:1000;display:none;flex-direction:column;
-  align-items:center;justify-content:center;gap:12px;transition:opacity .2s;cursor:pointer}
+  align-items:center;justify-content:center;gap:12px;cursor:pointer}
 #answerOverlay.show{display:flex;animation:answer-in .25s ease-out}
 #answerOverlay .answer-color{font-size:clamp(36px,10vw,64px);font-weight:900;
   text-shadow:0 4px 20px rgba(0,0,0,.5);letter-spacing:3px}
 #answerOverlay .answer-time{font-size:18px;opacity:.8;font-weight:600}
 #answerOverlay .answer-hint{font-size:13px;opacity:.5;position:absolute;bottom:40px}
-
-/* Stats Bar */
 .stats-bar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .stat{background:var(--card);border:1px solid var(--card-border);border-radius:10px;
   padding:6px 12px;font-size:12px;display:flex;align-items:center;gap:4px}
 .stat .val{font-weight:700;color:var(--cyan)}
-
-/* Log */
 .log{background:rgba(0,0,0,.5);border-radius:10px;padding:8px;font-family:'Courier New',monospace;
   font-size:11px;color:var(--green);max-height:120px;overflow-y:auto;line-height:1.6;
   border:1px solid rgba(16,185,129,.15)}
-
-/* Status indicator */
 .status{text-align:center;padding:8px;border-radius:10px;font-weight:700;font-size:13px;
   text-transform:uppercase;letter-spacing:1px}
 .status.ready{background:rgba(16,185,129,.15);color:var(--green)}
 .status.analyzing{background:rgba(124,58,237,.2);color:var(--purple);animation:pulse-glow 1s infinite}
 .status.error{background:rgba(239,71,111,.15);color:var(--warn)}
 .status.offline{background:rgba(148,163,184,.1);color:var(--muted)}
-
-/* Header */
 .header{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
 .header h1{font-size:18px;font-weight:900;background:linear-gradient(135deg,var(--purple),var(--cyan));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .header .badge{font-size:10px;background:var(--purple);color:#fff;padding:3px 8px;border-radius:6px}
-
-/* Bottom bar */
 .bottom-bar{display:flex;gap:8px;align-items:center;justify-content:center;padding:4px 0}
-
-/* Animations */
+/* Mode tabs */
+.mode-tabs{display:flex;gap:4px;background:rgba(0,0,0,.3);border-radius:12px;padding:3px;border:1px solid var(--card-border)}
+.mode-tab{flex:1;padding:8px;border:none;border-radius:10px;font-family:inherit;font-weight:600;
+  font-size:12px;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s}
+.mode-tab.active{background:var(--purple);color:#fff}
+#cameraSection,#screenshotSection{display:none}
+#cameraSection.active,#screenshotSection.active{display:block}
+.hidden-input{display:none}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes pulse-glow{0%,100%{opacity:1}50%{opacity:.7}}
 @keyframes answer-in{from{opacity:0;transform:scale(1.1)}to{opacity:1;transform:scale(1)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:24px;height:24px;border:3px solid rgba(255,255,255,.2);
-  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin:0 auto}
-
-/* Compact for split-screen */
 @media(max-height:450px){
   .screen{padding:6px;gap:4px}
   .card{padding:8px;border-radius:10px}
@@ -117,6 +101,7 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
   .btn-capture{width:52px;height:52px;font-size:22px}
   .log{max-height:60px}
   .stats-bar .stat{padding:3px 6px;font-size:10px}
+  .img-preview{max-height:140px}
 }
 </style>
 </head>
@@ -126,9 +111,8 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
 <div id="setupScreen" class="screen active">
   <div class="header">
     <h1>🚀 BootKahoot</h1>
-    <span class="badge">Mobile v1.0</span>
+    <span class="badge">Mobile v2.0</span>
   </div>
-
   <div class="card">
     <h2><span class="dot" style="background:var(--purple)"></span> API Bağlantısı</h2>
     <label>Gemini API Key(leri) — virgülle ayır</label>
@@ -141,20 +125,16 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
       <option value="gemini-2.0-flash">gemini-2.0-flash</option>
     </select>
   </div>
-
   <div class="card">
-    <h2><span class="dot" style="background:var(--cyan)"></span> Nasıl Çalışır?</h2>
+    <h2><span class="dot" style="background:var(--cyan)"></span> 2 Mod</h2>
     <div style="font-size:12px;color:var(--muted);line-height:1.7">
-      <b>1.</b> Kahoot'u bir sekmede aç, bu uygulamayı diğerinde<br>
-      <b>2.</b> Kamerayı projektöre/ekrana çevir<br>
-      <b>3.</b> Soru gelince 📸 butona bas veya <b>Oto-Mod</b> aç<br>
-      <b>4.</b> Cevap rengi ekranı kaplar → Kahoot'a geç, bas<br>
+      <b>📷 Kamera:</b> Projektöre/ekrana çevir, split-screen ile Kahoot'un yanında kullan<br>
+      <b>📱 Ekran Görüntüsü:</b> Kahoot soruyu telefonunda gösteriyorsa, ekran görüntüsü al ve yükle
       <div style="margin-top:6px;padding:6px;background:rgba(124,58,237,.1);border-radius:8px;color:var(--text)">
-        💡 <b>Split-Screen:</b> Samsung'da iki uygulamayı üst-alt aç, bot üstte Kahoot altta olsun
+        💡 <b>Split-Screen:</b> Samsung'da bot üstte, Kahoot altta
       </div>
     </div>
   </div>
-
   <button class="btn btn-primary" onclick="connectAndStart()" style="margin-top:auto">
     ⚡ BAĞLAN & BAŞLA
   </button>
@@ -168,19 +148,39 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
     <button class="btn btn-ghost" onclick="goSetup()" style="padding:4px 10px;font-size:11px">⚙️</button>
   </div>
 
-  <div id="statusBar" class="status offline">KAMERA BEKLENİYOR</div>
+  <div id="statusBar" class="status offline">MOD SEÇ</div>
 
-  <div class="cam-wrap" id="camWrap">
-    <video id="camVideo" autoplay playsinline muted></video>
-    <div class="cam-overlay"></div>
-    <div class="cam-badge"><span class="live-dot"></span> CANLI</div>
+  <!-- Mode Toggle -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tabCamera" onclick="switchMode('camera')">📷 Kamera</button>
+    <button class="mode-tab" id="tabScreenshot" onclick="switchMode('screenshot')">📱 Ekran Görüntüsü</button>
   </div>
 
-  <div class="bottom-bar">
-    <button class="btn btn-turbo" id="btnAuto" onclick="toggleAuto()" style="flex:1">
-      🚀 OTO-MOD: KAPALI
+  <!-- CAMERA MODE -->
+  <div id="cameraSection" class="active">
+    <div class="cam-wrap" id="camWrap">
+      <video id="camVideo" autoplay playsinline muted></video>
+      <div class="cam-overlay"></div>
+      <div class="cam-badge"><span class="live-dot"></span> CANLI</div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn btn-turbo" id="btnAuto" onclick="toggleAuto()" style="flex:1">
+        🚀 OTO-MOD: KAPALI
+      </button>
+      <button class="btn-capture" id="btnCapture" onclick="manualCapture()">📸</button>
+    </div>
+  </div>
+
+  <!-- SCREENSHOT MODE -->
+  <div id="screenshotSection">
+    <div class="img-preview" id="imgPreview">
+      <div class="placeholder">📱 Ekran görüntüsü yükle veya<br>galeriden seç</div>
+    </div>
+    <input type="file" accept="image/*" class="hidden-input" id="fileInput" onchange="onFileSelected(event)">
+    <button class="btn-upload" onclick="$('fileInput').click()">📂 GÖRÜNTÜ YÜKLE / GALERİDEN SEÇ</button>
+    <button class="btn btn-primary" id="btnAnalyze" onclick="analyzeScreenshot()" style="display:none">
+      🤖 ANALİZ ET
     </button>
-    <button class="btn-capture" id="btnCapture" onclick="manualCapture()">📸</button>
   </div>
 
   <div class="stats-bar">
@@ -189,7 +189,6 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
     <div class="stat">⚡ <span class="val" id="statLast">--</span></div>
     <div class="stat">🔑 <span class="val" id="statKeys">0</span> key</div>
   </div>
-
   <div class="log" id="logBox">BootKahoot Mobile hazır.\n</div>
 </div>
 
@@ -201,15 +200,10 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
 </div>
 
 <script>
-/* ===== CONSTANTS ===== */
 const PROMPT = 'Ekrana bak. Eğer bir Kahoot sorusu VE 4 renkli şık (kırmızı, mavi, sarı, yeşil) ' +
   'görünüyorsa, doğru cevabın rengini SADECE tek kelime olarak yaz: KIRMIZI, MAVI, SARI veya YESIL. ' +
   'Eğer ekranda soru veya şıklar YOKSA, sadece YOK yaz.';
-const POLL_MS = 600;
-const CHANGE_THRESH = 12;
-const COOLDOWN_S = 5;
-const MAX_IMG_W = 768;
-
+const POLL_MS = 600, CHANGE_THRESH = 12, COOLDOWN_S = 5, MAX_IMG_W = 768;
 const COLORS = {
   KIRMIZI: { bg: '#e21b3c', name: 'KIRMIZI 🔴' },
   MAVI:    { bg: '#1368ce', name: 'MAVİ 🔵' },
@@ -217,277 +211,218 @@ const COLORS = {
   YESIL:   { bg: '#26890c', name: 'YEŞİL 🟢' }
 };
 
-/* ===== STATE ===== */
 const S = {
   keys: [], keyIdx: 0, model: 'gemini-2.5-flash',
-  stream: null, analyzing: false, autoMode: false,
-  lastFrame: null, lastAnswerTime: 0,
+  stream: null, analyzing: false, autoMode: false, mode: 'camera',
+  lastFrame: null, lastAnswerTime: 0, screenshotB64: null,
   stats: { count: 0, times: [] }
 };
 
-/* ===== DOM ===== */
 const $ = id => document.getElementById(id);
-const setupScreen = $('setupScreen'), mainScreen = $('mainScreen');
-const camVideo = $('camVideo'), logBox = $('logBox');
-const statusBar = $('statusBar'), btnAuto = $('btnAuto'), btnCapture = $('btnCapture');
 const overlay = $('answerOverlay'), answerText = $('answerText'), answerTime = $('answerTime');
+const logBox = $('logBox'), statusBar = $('statusBar');
 
-/* ===== UTILS ===== */
 function log(msg) {
-  const t = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const t = new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   logBox.textContent += `[${t}] ${msg}\n`;
   logBox.scrollTop = logBox.scrollHeight;
 }
-
-function setStatus(text, cls) {
-  statusBar.textContent = text;
-  statusBar.className = 'status ' + cls;
-}
-
-function vibrate(pattern) {
-  if (navigator.vibrate) navigator.vibrate(pattern);
-}
-
-function updateStats() {
+function setStatus(t,c){ statusBar.textContent=t; statusBar.className='status '+c; }
+function vibrate(p){ if(navigator.vibrate) navigator.vibrate(p); }
+function updateStats(){
   $('statCount').textContent = S.stats.count;
-  if (S.stats.times.length) {
-    const avg = S.stats.times.reduce((a, b) => a + b, 0) / S.stats.times.length;
-    $('statAvg').textContent = avg.toFixed(1) + 's';
-    $('statLast').textContent = S.stats.times[S.stats.times.length - 1].toFixed(1) + 's';
+  if(S.stats.times.length){
+    const avg = S.stats.times.reduce((a,b)=>a+b,0)/S.stats.times.length;
+    $('statAvg').textContent = avg.toFixed(1)+'s';
+    $('statLast').textContent = S.stats.times[S.stats.times.length-1].toFixed(1)+'s';
+  }
+}
+
+/* ===== MODE SWITCH ===== */
+function switchMode(mode) {
+  S.mode = mode;
+  $('tabCamera').classList.toggle('active', mode==='camera');
+  $('tabScreenshot').classList.toggle('active', mode==='screenshot');
+  $('cameraSection').classList.toggle('active', mode==='camera');
+  $('screenshotSection').classList.toggle('active', mode==='screenshot');
+  if(mode==='camera') {
+    startCamera();
+    setStatus('HAZIR — 📸 ile tara veya Oto-Mod aç','ready');
+  } else {
+    stopAuto();
+    if(S.stream){ S.stream.getTracks().forEach(t=>t.stop()); S.stream=null; }
+    setStatus('HAZIR — ekran görüntüsü yükle','ready');
   }
 }
 
 /* ===== SETUP ===== */
-function loadSaved() {
-  const saved = localStorage.getItem('bk_keys');
-  if (saved) $('apiKeyInput').value = saved;
-  const model = localStorage.getItem('bk_model');
-  if (model) $('modelSelect').value = model;
+function loadSaved(){
+  const s=localStorage.getItem('bk_keys'); if(s) $('apiKeyInput').value=s;
+  const m=localStorage.getItem('bk_model'); if(m) $('modelSelect').value=m;
 }
-
-function connectAndStart() {
-  const raw = $('apiKeyInput').value.trim();
-  if (!raw) { showSetupError('API key gerekli!'); return; }
-  S.keys = raw.split(',').map(k => k.trim()).filter(Boolean);
-  S.model = $('modelSelect').value;
-  S.keyIdx = 0;
-  localStorage.setItem('bk_keys', raw);
-  localStorage.setItem('bk_model', S.model);
-  $('statKeys').textContent = S.keys.length;
+function connectAndStart(){
+  const raw=$('apiKeyInput').value.trim();
+  if(!raw){showSetupError('API key gerekli!');return;}
+  S.keys=raw.split(',').map(k=>k.trim()).filter(Boolean);
+  S.model=$('modelSelect').value; S.keyIdx=0;
+  localStorage.setItem('bk_keys',raw); localStorage.setItem('bk_model',S.model);
+  $('statKeys').textContent=S.keys.length;
   log(`Bağlanıldı: ${S.model} (${S.keys.length} key)`);
-
-  setupScreen.classList.remove('active');
-  mainScreen.classList.add('active');
+  $('setupScreen').classList.remove('active');
+  $('mainScreen').classList.add('active');
   startCamera();
 }
-
-function showSetupError(msg) {
-  const el = $('setupError');
-  el.textContent = msg; el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 3000);
+function showSetupError(m){
+  const e=$('setupError'); e.textContent=m; e.style.display='block';
+  setTimeout(()=>e.style.display='none',3000);
 }
-
-function goSetup() {
+function goSetup(){
   stopAuto();
-  if (S.stream) { S.stream.getTracks().forEach(t => t.stop()); S.stream = null; }
-  mainScreen.classList.remove('active');
-  setupScreen.classList.add('active');
+  if(S.stream){S.stream.getTracks().forEach(t=>t.stop());S.stream=null;}
+  $('mainScreen').classList.remove('active'); $('setupScreen').classList.add('active');
 }
 
 /* ===== CAMERA ===== */
-async function startCamera() {
-  try {
-    S.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+async function startCamera(){
+  if(S.mode!=='camera') return;
+  try{
+    S.stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
     });
-    camVideo.srcObject = S.stream;
-    await camVideo.play();
-    setStatus('HAZIR — 📸 ile tara veya Oto-Mod aç', 'ready');
+    $('camVideo').srcObject=S.stream; await $('camVideo').play();
+    setStatus('HAZIR — 📸 ile tara veya Oto-Mod aç','ready');
     log('Kamera açıldı ✔');
-  } catch (e) {
-    setStatus('KAMERA HATASI', 'error');
-    log('Kamera hatası: ' + e.message);
-  }
+  }catch(e){setStatus('KAMERA HATASI','error');log('Kamera hatası: '+e.message);}
+}
+function captureFrame(maxW){
+  const v=$('camVideo'), c=document.createElement('canvas');
+  if(!v.videoWidth) return null;
+  const w=Math.min(v.videoWidth,maxW||MAX_IMG_W), r=w/v.videoWidth;
+  c.width=w; c.height=Math.round(v.videoHeight*r);
+  c.getContext('2d').drawImage(v,0,0,c.width,c.height); return c;
+}
+function getCameraBase64(){
+  const c=captureFrame(MAX_IMG_W); if(!c) return null;
+  return c.toDataURL('image/jpeg',0.82).split(',')[1];
+}
+function getSmallFrameData(){
+  const c=captureFrame(48); if(!c) return null;
+  return c.getContext('2d').getImageData(0,0,c.width,c.height);
 }
 
-function captureFrame(maxW) {
-  const c = document.createElement('canvas');
-  const vw = camVideo.videoWidth, vh = camVideo.videoHeight;
-  if (!vw) return null;
-  const w = Math.min(vw, maxW || MAX_IMG_W);
-  const ratio = w / vw;
-  c.width = w; c.height = Math.round(vh * ratio);
-  c.getContext('2d').drawImage(camVideo, 0, 0, c.width, c.height);
-  return c;
+/* ===== SCREENSHOT MODE ===== */
+function onFileSelected(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const img=document.createElement('img');
+    img.src=ev.target.result;
+    $('imgPreview').innerHTML=''; $('imgPreview').appendChild(img);
+    // Resize and store base64
+    img.onload=function(){
+      const c=document.createElement('canvas');
+      const w=Math.min(img.naturalWidth,MAX_IMG_W), r=w/img.naturalWidth;
+      c.width=w; c.height=Math.round(img.naturalHeight*r);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      S.screenshotB64=c.toDataURL('image/jpeg',0.82).split(',')[1];
+      $('btnAnalyze').style.display='block';
+      log('📱 Görüntü yüklendi ('+c.width+'x'+c.height+')');
+    };
+  };
+  reader.readAsDataURL(file);
 }
-
-function getFrameBase64() {
-  const c = captureFrame(MAX_IMG_W);
-  if (!c) return null;
-  return c.toDataURL('image/jpeg', 0.82).split(',')[1];
-}
-
-function getSmallFrameData() {
-  const c = captureFrame(48);
-  if (!c) return null;
-  return c.getContext('2d').getImageData(0, 0, c.width, c.height);
-}
-
-/* ===== CHANGE DETECTION ===== */
-function detectChange() {
-  const frame = getSmallFrameData();
-  if (!frame) return false;
-  if (!S.lastFrame) { S.lastFrame = frame; return false; }
-  const d1 = S.lastFrame.data, d2 = frame.data;
-  let diff = 0;
-  for (let i = 0; i < d1.length; i += 4) {
-    diff += Math.abs(d1[i] - d2[i]) + Math.abs(d1[i+1] - d2[i+1]) + Math.abs(d1[i+2] - d2[i+2]);
-  }
-  const mean = diff / (d1.length * 0.75);
-  S.lastFrame = frame;
-  return mean > CHANGE_THRESH;
+async function analyzeScreenshot(){
+  if(!S.screenshotB64){log('⚠ Önce görüntü yükle');return;}
+  await processWithBase64(S.screenshotB64);
 }
 
 /* ===== GEMINI API ===== */
-function nextKey() {
-  const k = S.keys[S.keyIdx];
-  S.keyIdx = (S.keyIdx + 1) % S.keys.length;
-  return k;
-}
-
-async function askGemini(base64) {
-  const key = nextKey();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${S.model}:generateContent?key=${key}`;
-  const body = {
-    contents: [{ parts: [
-      { text: PROMPT },
-      { inlineData: { mimeType: 'image/jpeg', data: base64 } }
-    ]}],
-    generationConfig: { temperature: 0 }
-  };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+function nextKey(){ const k=S.keys[S.keyIdx]; S.keyIdx=(S.keyIdx+1)%S.keys.length; return k; }
+async function askGemini(base64){
+  const key=nextKey();
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${S.model}:generateContent?key=${key}`;
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      contents:[{parts:[{text:PROMPT},{inlineData:{mimeType:'image/jpeg',data:base64}}]}],
+      generationConfig:{temperature:0}
+    })
   });
-  if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
-  const data = await res.json();
-  if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+  if(!res.ok) throw new Error(`API ${res.status}`);
+  const data=await res.json();
+  if(data.candidates&&data.candidates[0]&&data.candidates[0].content)
     return data.candidates[0].content.parts[0].text.trim().toUpperCase();
-  }
   throw new Error('Geçersiz yanıt');
 }
 
 /* ===== PROCESS ===== */
-async function processCapture() {
-  if (S.analyzing) return;
-  S.analyzing = true;
-  btnCapture.disabled = true;
-  setStatus('⌛ DÜŞÜNÜYOR...', 'analyzing');
-
-  try {
-    const b64 = getFrameBase64();
-    if (!b64) throw new Error('Kare yakalanamadı');
-
-    const t0 = performance.now();
-    const answer = await askGemini(b64);
-    const dt = (performance.now() - t0) / 1000;
-
+async function processWithBase64(b64){
+  if(S.analyzing) return;
+  S.analyzing=true;
+  $('btnCapture').disabled=true; $('btnAnalyze').disabled=true;
+  setStatus('⌛ DÜŞÜNÜYOR...','analyzing');
+  try{
+    const t0=performance.now();
+    const answer=await askGemini(b64);
+    const dt=(performance.now()-t0)/1000;
     log(`🤖 (${dt.toFixed(1)}s): ${answer}`);
+    if(answer.includes('YOK')){log('⏭ Soru/şık yok');setStatus('HAZIR','ready');return;}
+    let detected=null;
+    for(const c of Object.keys(COLORS)) if(answer.includes(c)){detected=c;break;}
+    if(detected){
+      showAnswer(detected,dt); S.stats.count++; S.stats.times.push(dt);
+      S.lastAnswerTime=Date.now(); updateStats();
+    }else{log('⚠ Renk çözümlenemedi: '+answer);setStatus('HAZIR','ready');}
+  }catch(e){log('❌ '+e.message);setStatus('HATA','error');}
+  finally{S.analyzing=false;$('btnCapture').disabled=false;$('btnAnalyze').disabled=false;}
+}
+async function processCapture(){
+  const b64=getCameraBase64();
+  if(!b64){log('⚠ Kare yakalanamadı');return;}
+  await processWithBase64(b64);
+}
 
-    if (answer.includes('YOK')) {
-      log('⏭ Soru/şık yok, atlandı');
-      setStatus('HAZIR — soru bulunamadı', 'ready');
-      return;
-    }
+/* ===== ANSWER ===== */
+function showAnswer(color,dt){
+  const info=COLORS[color];
+  overlay.style.background=info.bg; answerText.textContent=info.name;
+  answerTime.textContent=dt.toFixed(1)+' saniye';
+  overlay.classList.add('show'); vibrate([100,50,200]);
+  setStatus(`✔ ${info.name} (${dt.toFixed(1)}s)`,'ready');
+  if(S.autoMode) setTimeout(dismissAnswer,3000);
+}
+function dismissAnswer(){overlay.classList.remove('show');}
 
-    let detected = null;
-    for (const color of Object.keys(COLORS)) {
-      if (answer.includes(color)) { detected = color; break; }
-    }
-
-    if (detected) {
-      showAnswer(detected, dt);
-      S.stats.count++;
-      S.stats.times.push(dt);
-      S.lastAnswerTime = Date.now();
-      updateStats();
-    } else {
-      log('⚠ Renk çözümlenemedi: ' + answer);
-      setStatus('HAZIR — renk bulunamadı', 'ready');
-    }
-  } catch (e) {
-    log('❌ Hata: ' + e.message);
-    setStatus('HATA — tekrar dene', 'error');
-  } finally {
-    S.analyzing = false;
-    btnCapture.disabled = false;
+/* ===== MANUAL / AUTO ===== */
+function manualCapture(){vibrate(30);processCapture();}
+let autoTimer=null;
+function toggleAuto(){
+  S.autoMode=!S.autoMode;
+  if(S.autoMode){
+    $('btnAuto').textContent='🔥 OTO-MOD: AÇIK'; $('btnAuto').classList.add('on');
+    S.lastFrame=null; log('🚀 OTO-MOD AÇILDI'); autoPoll();
+  }else stopAuto();
+}
+function stopAuto(){
+  S.autoMode=false; if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  $('btnAuto').textContent='🚀 OTO-MOD: KAPALI'; $('btnAuto').classList.remove('on');
+}
+function detectChange(){
+  const f=getSmallFrameData(); if(!f) return false;
+  if(!S.lastFrame){S.lastFrame=f;return false;}
+  let diff=0; const d1=S.lastFrame.data,d2=f.data;
+  for(let i=0;i<d1.length;i+=4) diff+=Math.abs(d1[i]-d2[i])+Math.abs(d1[i+1]-d2[i+1])+Math.abs(d1[i+2]-d2[i+2]);
+  S.lastFrame=f; return diff/(d1.length*0.75)>CHANGE_THRESH;
+}
+function autoPoll(){
+  if(!S.autoMode) return;
+  if(!S.analyzing&&Date.now()-S.lastAnswerTime>COOLDOWN_S*1000){
+    if(detectChange()){log('🔍 Ekran değişti');setTimeout(()=>processCapture(),800);}
   }
+  autoTimer=setTimeout(autoPoll,POLL_MS);
 }
 
-/* ===== ANSWER DISPLAY ===== */
-function showAnswer(color, dt) {
-  const info = COLORS[color];
-  overlay.style.background = info.bg;
-  answerText.textContent = info.name;
-  answerTime.textContent = dt.toFixed(1) + ' saniye';
-  overlay.classList.add('show');
-  vibrate([100, 50, 200]);
-  setStatus(`✔ ${info.name} (${dt.toFixed(1)}s)`, 'ready');
-
-  if (S.autoMode) setTimeout(dismissAnswer, 3000);
-}
-
-function dismissAnswer() {
-  overlay.classList.remove('show');
-}
-
-/* ===== MANUAL CAPTURE ===== */
-function manualCapture() {
-  vibrate(30);
-  processCapture();
-}
-
-/* ===== AUTO MODE ===== */
-let autoTimer = null;
-
-function toggleAuto() {
-  S.autoMode = !S.autoMode;
-  if (S.autoMode) {
-    btnAuto.textContent = '🔥 OTO-MOD: AÇIK';
-    btnAuto.classList.add('on');
-    S.lastFrame = null;
-    log('🚀 OTO-MOD AÇILDI');
-    autoPoll();
-  } else {
-    stopAuto();
-  }
-}
-
-function stopAuto() {
-  S.autoMode = false;
-  if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
-  btnAuto.textContent = '🚀 OTO-MOD: KAPALI';
-  btnAuto.classList.remove('on');
-}
-
-function autoPoll() {
-  if (!S.autoMode) return;
-  if (!S.analyzing && (Date.now() - S.lastAnswerTime > COOLDOWN_S * 1000)) {
-    if (detectChange()) {
-      log('🔍 Ekran değişti — analiz...');
-      // Wait a moment for options to load
-      setTimeout(() => processCapture(), 800);
-    }
-  }
-  autoTimer = setTimeout(autoPoll, POLL_MS);
-}
-
-/* ===== INIT ===== */
 loadSaved();
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
