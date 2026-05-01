@@ -391,11 +391,31 @@ async function processCapture(){
 }
 
 /* ===== ANSWER ===== */
+function speakColor(color){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const names={KIRMIZI:'Kırmızı',MAVI:'Mavi',SARI:'Sarı',YESIL:'Yeşil'};
+  const u=new SpeechSynthesisUtterance(names[color]||color);
+  u.lang='tr-TR'; u.rate=1.8; u.pitch=1.2; u.volume=1;
+  window.speechSynthesis.speak(u);
+}
+function playTone(color){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const freq={KIRMIZI:330,MAVI:440,SARI:550,YESIL:660};
+    const osc=ctx.createOscillator(); const gain=ctx.createGain();
+    osc.type='sine'; osc.frequency.value=freq[color]||440;
+    gain.gain.value=0.3;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime+0.25);
+  }catch(e){}
+}
 function showAnswer(color,dt){
   const info=COLORS[color];
   overlay.style.background=info.bg; answerText.textContent=info.name;
   answerTime.textContent=dt.toFixed(1)+' saniye';
   overlay.classList.add('show'); vibrate([100,50,200]);
+  speakColor(color); playTone(color);
   setStatus(`✔ ${info.name} (${dt.toFixed(1)}s)`,'ready');
   if(S.autoMode) setTimeout(dismissAnswer,3000);
 }
