@@ -1,0 +1,17 @@
+{
+  "name": "BootKahoot Mobile",
+  "short_name": "BootKahoot",
+  "description": "AI-Powered Kahoot Bot — DAÜ AI Summit '26",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0f",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237c3aed'/><text x='50' y='68' font-size='55' text-anchor='middle' fill='white'>🚀</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

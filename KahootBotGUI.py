@@ -1,134 +1,206 @@
+# UYARI: Windows'ta Yönetici (Administrator) olarak çalıştırılmalıdır.
+
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import pyautogui
 import keyboard
 import threading
 import time
 import json
 import os
-from PIL import ImageGrab
+import io
+import cv2
+from PIL import ImageGrab, ImageChops, ImageStat, Image
 
-print("--- INICIANDO EL PROGRAMA (DARK MODE) ---")
+pyautogui.PAUSE = 0
+pyautogui.FAILSAFE = False
 
 CONFIG_FILE = "kahoot_config.json"
+DEFAULT_MODEL = "gemini-2.5-flash"
+POLL_INTERVAL_MS = 500
+CHANGE_THRESHOLD = 15.0
+AUTO_COOLDOWN_S = 6.0
+IMG_MAX_WIDTH = 768
+OPTION_POLL_MS = 400          # Şık kontrol aralığı (ms)
+OPTION_TIMEOUT_S = 8.0        # Max bekleme süresi
+MIN_REQUEST_INTERVAL_S = 2    # Key rotasyonu sayesinde düşük tutabiliriz
 
-# --- PALETA DE COLORES ---
-COL_BG = "#121212"        # Fondo principal (Casi negro)
-COL_FRAME = "#1E1E1E"     # Fondo de paneles
-COL_TEXT = "#E0E0E0"      # Texto principal
-COL_ACCENT = "#BB86FC"    # Morado (Botones acción)
-COL_SUCCESS = "#03DAC6"   # Cyan/Verde (Éxito)
-COL_WARN = "#CF6679"      # Rojo suave (Alertas)
-COL_INPUT = "#2C2C2C"     # Fondo de inputs
-COL_BTN_TEXT = "#000000"  # Texto de botones
+PROMPT_TR = (
+    "Ekrana bak. Eğer bir Kahoot sorusu VE 4 renkli şık (kırmızı, mavi, sarı, yeşil) "
+    "görünüyorsa, doğru cevabın rengini SADECE tek kelime olarak yaz: "
+    "KIRMIZI, MAVI, SARI veya YESIL. "
+    "Eğer ekranda soru veya şıklar YOKSA, sadece YOK yaz."
+)
+
+COL_BG = "#121212"
+COL_FRAME = "#1E1E1E"
+COL_TEXT = "#E0E0E0"
+COL_ACCENT = "#BB86FC"
+COL_SUCCESS = "#03DAC6"
+COL_WARN = "#CF6679"
+COL_INPUT = "#2C2C2C"
+COL_TURBO = "#FF6D00"
+
 
 class KahootBotApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Kahoot Bot - Dark Edition")
-        self.root.geometry("420x720")
+        self.root.title("Kahoot Bot — AI Summit '26 Turbo")
+        self.root.geometry("450x850")
         self.root.attributes('-topmost', True)
         self.root.configure(bg=COL_BG)
 
-        # Variables
         self.api_key = tk.StringVar()
-        self.selected_model_name = tk.StringVar()
+        self.selected_model_name = tk.StringVar(value=DEFAULT_MODEL)
         self.capture_area = None
         self.button_coords = {"rojo": None, "azul": None, "amarillo": None, "verde": None}
-        self.model = None
+        self.clients = []         # Birden fazla API key için client listesi
+        self.client_index = 0     # Sıradaki client
+        self.client = None        # Aktif client
+        self.model_name = None
         self.is_running = False
+        self.is_waiting = False   # Çift tetiklemeyi önle
 
-        # --- ESTILOS TTK (Para el Combobox) ---
+        self.use_camera = tk.BooleanVar(value=False)
+        self.camera_index = tk.IntVar(value=0)
+        self.camera_cap = None
+
+        self.auto_mode = False
+        self.last_screenshot = None
+        self.last_answer_time = 0
+        self.last_request_time = 0
+        self.stats = {"answered": 0, "times": []}
+
         style = ttk.Style()
         style.theme_use('clam')
-        style.configure("TCombobox", fieldbackground=COL_INPUT, background=COL_FRAME, foreground=COL_TEXT, arrowcolor="white")
+        style.configure("TCombobox", fieldbackground=COL_INPUT, background=COL_FRAME,
+                        foreground=COL_TEXT, arrowcolor="white")
 
-        # --- INTERFAZ ---
-        
-        # 1. API HEADER
         self.create_header()
-
-        # 2. CALIBRACIÓN
+        self.create_source_section()
         self.create_calibration_section()
-
-        # 3. CONTROL Y LOGS
+        self.create_turbo_section()
         self.create_control_section()
 
-        # Lógica inicial
         self.load_config()
         keyboard.add_hotkey('k', self.on_hotkey_pressed)
         self.update_ui_status()
-        print("--- VENTANA LISTA ---")
 
     def create_header(self):
-        frame = tk.LabelFrame(self.root, text=" 1. CONEXIÓN ", bg=COL_BG, fg=COL_SUCCESS, font=("Consolas", 10, "bold"), bd=2, relief="groove")
-        frame.pack(fill="x", padx=15, pady=10)
-        
-        # API Input
-        tk.Label(frame, text="API Key:", bg=COL_BG, fg=COL_TEXT).pack(anchor="w", padx=5)
-        entry = tk.Entry(frame, textvariable=self.api_key, show="*", bg=COL_INPUT, fg="white", insertbackground="white", relief="flat")
-        entry.pack(fill="x", padx=5, pady=5, ipady=3)
-        
-        # Botones Modelos
-        tk.Button(frame, text="↻ Buscar Modelos", command=self.fetch_models, 
-                 bg="#3700B3", fg="white", activebackground="#6200EE", activeforeground="white", relief="flat", cursor="hand2").pack(fill="x", padx=5, pady=2)
-        
-        # Combo y Conectar
-        tk.Label(frame, text="Modelo:", bg=COL_BG, fg=COL_TEXT).pack(anchor="w", padx=5)
-        self.combo_models = ttk.Combobox(frame, textvariable=self.selected_model_name, state="normal")
+        f = tk.LabelFrame(self.root, text=" 1. BAĞLANTI ", bg=COL_BG, fg=COL_SUCCESS,
+                          font=("Consolas", 10, "bold"), bd=2, relief="groove")
+        f.pack(fill="x", padx=15, pady=10)
+        tk.Label(f, text="API Key (birden fazla = virgülle ayır):", bg=COL_BG, fg=COL_TEXT).pack(anchor="w", padx=5)
+        tk.Entry(f, textvariable=self.api_key, show="", bg=COL_INPUT, fg="white",
+                 insertbackground="white", relief="flat").pack(fill="x", padx=5, pady=5, ipady=3)
+        tk.Button(f, text="↻ Modelleri Bul", command=self.fetch_models,
+                  bg="#3700B3", fg="white", relief="flat", cursor="hand2").pack(fill="x", padx=5, pady=2)
+        tk.Label(f, text="Model:", bg=COL_BG, fg=COL_TEXT).pack(anchor="w", padx=5)
+        self.combo_models = ttk.Combobox(f, textvariable=self.selected_model_name, state="normal")
         self.combo_models.pack(fill="x", padx=5, pady=2)
-        
-        tk.Button(frame, text="⚡ CONECTAR", command=self.manual_connect, 
-                 bg=COL_SUCCESS, fg="black", font=("Arial", 9, "bold"), activebackground="#018786", cursor="hand2").pack(fill="x", padx=5, pady=8)
+        tk.Button(f, text="⚡ BAĞLAN", command=self.manual_connect,
+                  bg=COL_SUCCESS, fg="black", font=("Arial", 9, "bold"), cursor="hand2"
+                  ).pack(fill="x", padx=5, pady=8)
+
+    def create_source_section(self):
+        f = tk.LabelFrame(self.root, text=" 2. GÖRÜNTÜ KAYNAĞI ", bg=COL_BG, fg="#00BCD4",
+                          font=("Consolas", 10, "bold"), bd=2, relief="groove")
+        f.pack(fill="x", padx=15, pady=5)
+        row = tk.Frame(f, bg=COL_BG)
+        row.pack(fill="x", padx=5, pady=5)
+        tk.Radiobutton(row, text="Ekran Yakalama", variable=self.use_camera, value=False,
+                       bg=COL_BG, fg=COL_TEXT, selectcolor=COL_INPUT, activebackground=COL_BG,
+                       command=self._on_source_change).pack(side="left", padx=5)
+        tk.Radiobutton(row, text="Kamera (DroidCam)", variable=self.use_camera, value=True,
+                       bg=COL_BG, fg=COL_TEXT, selectcolor=COL_INPUT, activebackground=COL_BG,
+                       command=self._on_source_change).pack(side="left", padx=5)
+        self.cam_frame = tk.Frame(f, bg=COL_BG)
+        self.cam_frame.pack(fill="x", padx=5, pady=2)
+        tk.Label(self.cam_frame, text="Kamera No:", bg=COL_BG, fg=COL_TEXT).pack(side="left")
+        tk.Spinbox(self.cam_frame, from_=0, to=5, textvariable=self.camera_index, width=3,
+                   bg=COL_INPUT, fg="white").pack(side="left", padx=5)
+        tk.Button(self.cam_frame, text="📷 Test Et", command=self.test_camera,
+                  bg=COL_FRAME, fg="white", cursor="hand2").pack(side="left", padx=5)
+        self.lbl_cam = tk.Label(self.cam_frame, text="", bg=COL_BG, fg=COL_WARN, font=("Arial", 8))
+        self.lbl_cam.pack(side="left", padx=5)
+        tk.Label(f, text="💡 DroidCam ile telefonu projektöre çevir, kamera no'yu seç",
+                 bg=COL_BG, fg="gray", font=("Arial", 7)).pack(pady=(0, 3))
+
+    def _on_source_change(self):
+        if not self.use_camera.get() and self.camera_cap:
+            self.camera_cap.release()
+            self.camera_cap = None
+
+    def test_camera(self):
+        idx = self.camera_index.get()
+        cap = cv2.VideoCapture(idx)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                Image.fromarray(frame_rgb).show(title=f"Kamera {idx} Testi")
+                self.lbl_cam.config(text=f"✔ Kamera {idx} OK", fg=COL_SUCCESS)
+            cap.release()
+        else:
+            self.lbl_cam.config(text=f"✘ Kamera {idx} bulunamadı", fg=COL_WARN)
+
+    def _grab_camera_frame(self):
+        if self.camera_cap is None or not self.camera_cap.isOpened():
+            self.camera_cap = cv2.VideoCapture(self.camera_index.get())
+        ret, frame = self.camera_cap.read()
+        if not ret:
+            return None
+        return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     def create_calibration_section(self):
-        frame = tk.LabelFrame(self.root, text=" 2. CALIBRACIÓN ", bg=COL_BG, fg=COL_ACCENT, font=("Consolas", 10, "bold"), bd=2, relief="groove")
-        frame.pack(fill="x", padx=15, pady=5)
-
-        # Área
-        btn_area = tk.Button(frame, text="[ A ] DEFINIR ÁREA", command=self.start_area_selection,
-                            bg=COL_FRAME, fg="white", activebackground=COL_ACCENT, relief="raised")
-        btn_area.pack(fill="x", padx=5, pady=2)
-        self.lbl_area = tk.Label(frame, text="⚠ Falta Área", bg=COL_BG, fg=COL_WARN, font=("Arial", 8))
+        f = tk.LabelFrame(self.root, text=" 3. KALİBRASYON ", bg=COL_BG, fg=COL_ACCENT,
+                          font=("Consolas", 10, "bold"), bd=2, relief="groove")
+        f.pack(fill="x", padx=15, pady=5)
+        tk.Button(f, text="[ A ] ALAN BELİRLE", command=self.start_area_selection,
+                  bg=COL_FRAME, fg="white", relief="raised").pack(fill="x", padx=5, pady=2)
+        self.lbl_area = tk.Label(f, text="⚠ Alan Belirlenmedi", bg=COL_BG, fg=COL_WARN, font=("Arial", 8))
         self.lbl_area.pack()
+        tk.Button(f, text="[ B ] BUTONLARI EŞLEŞTİR", command=self.start_button_calibration,
+                  bg=COL_FRAME, fg="white", relief="raised").pack(fill="x", padx=5, pady=2)
+        self.lbl_buttons = tk.Label(f, text="⚠ Butonlar Eşleştirilmedi", bg=COL_BG, fg=COL_WARN, font=("Arial", 8))
+        self.lbl_buttons.pack(pady=(0, 5))
 
-        # Botones
-        btn_btns = tk.Button(frame, text="[ B ] MAPEAR BOTONES", command=self.start_button_calibration,
-                            bg=COL_FRAME, fg="white", activebackground=COL_ACCENT, relief="raised")
-        btn_btns.pack(fill="x", padx=5, pady=2)
-        self.lbl_buttons = tk.Label(frame, text="⚠ Faltan Botones", bg=COL_BG, fg=COL_WARN, font=("Arial", 8))
-        self.lbl_buttons.pack(pady=(0,5))
+    def create_turbo_section(self):
+        f = tk.LabelFrame(self.root, text=" 4. TURBO MOD ⚡ ", bg=COL_BG, fg=COL_TURBO,
+                          font=("Consolas", 10, "bold"), bd=2, relief="groove")
+        f.pack(fill="x", padx=15, pady=5)
+        self.btn_auto = tk.Button(f, text="🚀 OTO-MOD: KAPALI", command=self.toggle_auto_mode,
+                                  bg=COL_FRAME, fg="white", font=("Arial", 10, "bold"),
+                                  activebackground=COL_TURBO, cursor="hand2")
+        self.btn_auto.pack(fill="x", padx=5, pady=5)
+        sf = tk.Frame(f, bg=COL_BG)
+        sf.pack(fill="x", padx=5, pady=(0, 5))
+        self.lbl_stats = tk.Label(sf, text="📊 0 soru | ⏱ --", bg=COL_BG, fg=COL_TEXT, font=("Consolas", 9))
+        self.lbl_stats.pack(side="left")
+        self.lbl_speed = tk.Label(sf, text="", bg=COL_BG, fg=COL_SUCCESS, font=("Consolas", 9, "bold"))
+        self.lbl_speed.pack(side="right")
 
     def create_control_section(self):
-        frame = tk.LabelFrame(self.root, text=" 3. JUEGO ", bg=COL_BG, fg="#FF0266", font=("Consolas", 10, "bold"), bd=2, relief="groove")
-        frame.pack(fill="both", expand=True, padx=15, pady=10)
-
-        # Status Principal
-        self.lbl_status = tk.Label(frame, text="OFFLINE", bg=COL_BG, fg="#555555", font=("Impact", 24))
+        f = tk.LabelFrame(self.root, text=" 5. OYUN ", bg=COL_BG, fg="#FF0266",
+                          font=("Consolas", 10, "bold"), bd=2, relief="groove")
+        f.pack(fill="both", expand=True, padx=15, pady=10)
+        self.lbl_status = tk.Label(f, text="ÇEVRİMDIŞI", bg=COL_BG, fg="#555555", font=("Impact", 24))
         self.lbl_status.pack(pady=10)
-        
-        # Toolbar del Log
-        toolbar = tk.Frame(frame, bg=COL_BG)
-        toolbar.pack(fill="x", padx=5)
-        tk.Label(toolbar, text="Log de Gemini:", bg=COL_BG, fg="gray", font=("Arial", 8)).pack(side="left")
-        
-        # BOTÓN LIMPIAR
-        tk.Button(toolbar, text="🗑 Limpiar", command=self.clear_log, 
-                 bg=COL_BG, fg=COL_WARN, font=("Arial", 8, "bold"), bd=0, cursor="hand2").pack(side="right")
-
-        # Log Box
-        self.log_box = scrolledtext.ScrolledText(frame, height=10, font=("Consolas", 9), 
-                                                bg="#000000", fg="#00FF00", insertbackground="white", state='normal')
+        tb = tk.Frame(f, bg=COL_BG)
+        tb.pack(fill="x", padx=5)
+        tk.Label(tb, text="Gemini Logu:", bg=COL_BG, fg="gray", font=("Arial", 8)).pack(side="left")
+        tk.Button(tb, text="🗑 Temizle", command=self.clear_log,
+                  bg=COL_BG, fg=COL_WARN, font=("Arial", 8, "bold"), bd=0, cursor="hand2").pack(side="right")
+        self.log_box = scrolledtext.ScrolledText(f, height=6, font=("Consolas", 9),
+                                                 bg="#000000", fg="#00FF00", state='normal')
         self.log_box.pack(fill="both", expand=True, padx=5, pady=5)
+        tk.Label(f, text="'K' = Manuel  |  Oto-Mod = Tam otomatik", bg=COL_BG, fg=COL_ACCENT).pack(pady=5)
 
-        tk.Label(frame, text="Presiona 'K' para activar", bg=COL_BG, fg=COL_ACCENT).pack(pady=5)
-
-    # --- FUNCIONES ---
-
+    # === YARDIMCI ===
     def clear_log(self):
         self.log_box.delete('1.0', tk.END)
-        self.log("--- Log Limpiado ---")
 
     def log(self, text):
         self.log_box.insert(tk.END, f"> {text}\n")
@@ -146,66 +218,123 @@ class KahootBotApp:
                     saved_model = data.get("model_name", "")
                     if saved_model:
                         self.selected_model_name.set(saved_model)
-            except: pass
+                    self.use_camera.set(data.get("use_camera", False))
+                    self.camera_index.set(data.get("camera_index", 0))
+            except:
+                pass
 
     def save_config(self):
         data = {
             "api_key": self.api_key.get(),
             "capture_area": self.capture_area,
             "button_coords": self.button_coords,
-            "model_name": self.selected_model_name.get()
+            "model_name": self.selected_model_name.get(),
+            "use_camera": self.use_camera.get(),
+            "camera_index": self.camera_index.get()
         }
         with open(CONFIG_FILE, 'w') as f:
             json.dump(data, f)
 
     def update_ui_status(self):
-        if self.capture_area: self.lbl_area.config(text=f"✔ Área OK", fg=COL_SUCCESS)
-        if all(self.button_coords.values()): self.lbl_buttons.config(text="✔ Botones OK", fg=COL_SUCCESS)
-        
-        if self.model and self.capture_area and all(self.button_coords.values()):
-            self.lbl_status.config(text="LISTO (K)", fg=COL_SUCCESS)
+        if self.capture_area:
+            self.lbl_area.config(text="✔ Alan OK", fg=COL_SUCCESS)
+        if all(self.button_coords.values()):
+            self.lbl_buttons.config(text="✔ Butonlar OK", fg=COL_SUCCESS)
+        source_ok = self.use_camera.get() or self.capture_area
+        if self.client and source_ok and all(self.button_coords.values()):
+            self.lbl_status.config(text="HAZIR (K)", fg=COL_SUCCESS)
         else:
-            self.lbl_status.config(text="CONFIGURAR", fg="orange")
+            self.lbl_status.config(text="YAPILANDIR", fg="orange")
 
+    def update_stats_ui(self):
+        n = self.stats["answered"]
+        if self.stats["times"]:
+            avg = sum(self.stats["times"]) / len(self.stats["times"])
+            last = self.stats["times"][-1]
+            self.lbl_stats.config(text=f"📊 {n} soru | ⏱ ort: {avg:.1f}s")
+            self.lbl_speed.config(text=f"Son: {last:.1f}s")
+
+    def optimize_image(self, img):
+        w, h = img.size
+        if w > IMG_MAX_WIDTH:
+            ratio = IMG_MAX_WIDTH / w
+            img = img.resize((IMG_MAX_WIDTH, int(h * ratio)))
+        return img
+
+    def pil_to_bytes(self, img):
+        buf = io.BytesIO()
+        img.convert("RGB").save(buf, format="JPEG", quality=85)
+        buf.seek(0)
+        return buf.read()
+
+    # === MODEL ===
     def fetch_models(self):
         key = self.api_key.get().strip()
-        if not key: return messagebox.showerror("Error", "Pon la API Key primero")
-        
-        self.log("Buscando modelos...")
+        if not key:
+            return messagebox.showerror("Hata", "Önce API Key gir")
+        self.log("Modeller aranıyor...")
         try:
-            genai.configure(api_key=key)
-            models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            client = genai.Client(api_key=key)
+            models = [m.name for m in client.models.list()]
             self.combo_models['values'] = models
-            if models: 
+            if models:
                 self.combo_models.set(models[0])
-                self.log(f"Encontrados: {len(models)}")
-            else:
-                self.log("No encontrados. Escribe manual.")
+                self.log(f"Bulunan: {len(models)} model")
         except Exception as e:
-            self.log(f"Error API: {e}")
+            self.log(f"API Hatası: {e}")
 
     def manual_connect(self):
         name = self.selected_model_name.get().strip()
-        if not name: return messagebox.showerror("Error", "Escribe o selecciona un modelo")
+        if not name:
+            return messagebox.showerror("Hata", "Bir model yaz veya seç")
         self.connect_model(name)
 
     def connect_model(self, model_name):
         try:
-            genai.configure(api_key=self.api_key.get())
-            self.model = genai.GenerativeModel(model_name=model_name, generation_config={"temperature": 0.0})
-            self.log(f"Conectado a: {model_name}")
+            keys = [k.strip() for k in self.api_key.get().split(",") if k.strip()]
+            if not keys:
+                self.log("Hata: API key girilmedi")
+                return
+            self.clients = [genai.Client(api_key=k) for k in keys]
+            self.client_index = 0
+            self.client = self.clients[0]
+            self.model_name = model_name
+            self.log(f"Bağlanıldı: {model_name} ({len(keys)} key)")
             self.save_config()
             self.update_ui_status()
+            self.log("⏳ Bağlantı ısıtılıyor...")
+            threading.Thread(target=self._prewarm, daemon=True).start()
         except Exception as e:
-            self.log(f"Fallo conexión: {e}")
-            messagebox.showerror("Error", str(e))
+            self.log(f"Bağlantı hatası: {e}")
 
-    # --- CALIBRACIÓN VISUAL ---
+    def _next_client(self):
+        """Sıradaki API key'e geç (round-robin)."""
+        if len(self.clients) > 1:
+            self.client_index = (self.client_index + 1) % len(self.clients)
+            self.client = self.clients[self.client_index]
+
+    def _prewarm(self):
+        try:
+            t0 = time.time()
+            self.client.models.generate_content(
+                model=self.model_name,
+                contents="test",
+                config=types.GenerateContentConfig(
+                    thinking_config=types.ThinkingConfig(thinking_budget=0)
+                )
+            )
+            dt = time.time() - t0
+            self.root.after(0, lambda: self.log(f"✔ Hazır! Pre-warm: {dt:.1f}s"))
+        except Exception as e:
+            err = str(e)
+            self.root.after(0, lambda m=err: self.log(f"⚠ Pre-warm: {m}"))
+
+    # === KALİBRASYON ===
     def start_area_selection(self):
         self.root.iconify()
         self.sel_win = tk.Toplevel(self.root)
         self.sel_win.attributes('-fullscreen', True, '-alpha', 0.3, '-topmost', True)
-        self.sel_win.config(bg='black') # Oscuro para calibrar
+        self.sel_win.config(bg='black')
         self.sel_win.bind('<Button-1>', self.on_click_start)
         self.sel_win.bind('<B1-Motion>', self.on_drag)
         self.sel_win.bind('<ButtonRelease-1>', self.on_click_end)
@@ -229,7 +358,7 @@ class KahootBotApp:
         self.root.deiconify()
 
     def start_button_calibration(self):
-        messagebox.showinfo("Orden", "Click en: ROJO -> AZUL -> AMARILLO -> VERDE")
+        messagebox.showinfo("Sıralama", "Sırayla tıkla: KIRMIZI -> MAVİ -> SARI -> YEŞİL")
         self.root.iconify()
         self.cal_win = tk.Toplevel(self.root)
         self.cal_win.attributes('-fullscreen', True, '-alpha', 0.01, '-topmost', True)
@@ -239,9 +368,7 @@ class KahootBotApp:
 
     def cal_click(self, e):
         if self.cal_step < 4:
-            c = self.colors[self.cal_step]
-            self.button_coords[c] = (e.x, e.y)
-            print(f"Calibrado {c}: {e.x},{e.y}")
+            self.button_coords[self.colors[self.cal_step]] = (e.x, e.y)
             self.cal_step += 1
             if self.cal_step == 4:
                 self.cal_win.destroy()
@@ -249,46 +376,183 @@ class KahootBotApp:
                 self.save_config()
                 self.update_ui_status()
 
-    # --- PROCESO ---
-    def on_hotkey_pressed(self):
-        if self.is_running or not self.model: return
-        threading.Thread(target=self.process).start()
+    # === TURBO OTO-MOD ===
+    def toggle_auto_mode(self):
+        source_ok = self.use_camera.get() or self.capture_area
+        if not self.client or not source_ok or not all(self.button_coords.values()):
+            messagebox.showwarning("Uyarı", "Önce model bağla, kaynak ayarla ve butonları eşleştir!")
+            return
+        self.auto_mode = not self.auto_mode
+        if self.auto_mode:
+            self.btn_auto.config(text="🔥 OTO-MOD: AÇIK", bg=COL_TURBO, fg="black")
+            self.last_screenshot = None
+            self.log("🚀 OTO-MOD AÇILDI")
+            self._auto_poll()
+        else:
+            self.btn_auto.config(text="🚀 OTO-MOD: KAPALI", bg=COL_FRAME, fg="white")
+            self.log("⏹ OTO-MOD KAPATILDI")
 
-    def process(self):
-        self.is_running = True
-        self.root.after(0, lambda: self.lbl_status.config(text="⌛ ...", fg=COL_SUCCESS))
+    def _auto_poll(self):
+        if not self.auto_mode:
+            return
+        if time.time() - self.last_answer_time < AUTO_COOLDOWN_S or self.is_running or self.is_waiting:
+            self.root.after(POLL_INTERVAL_MS, self._auto_poll)
+            return
         try:
-            img = ImageGrab.grab(bbox=self.capture_area)
+            img = self._grab_image()
+            if img and self._detect_change(img):
+                self.is_waiting = True  # Çift tetiklemeyi önle
+                self.log("🔍 Ekran değişti — şıklar bekleniyor...")
+                self.last_screenshot = img
+                threading.Thread(target=self._wait_and_process, daemon=True).start()
+            elif img and self.last_screenshot is None:
+                self.last_screenshot = img
+        except:
+            pass
+        self.root.after(POLL_INTERVAL_MS, self._auto_poll)
+
+    def _grab_image(self):
+        if self.use_camera.get():
+            return self._grab_camera_frame()
+        elif self.capture_area:
+            return ImageGrab.grab(bbox=self.capture_area)
+        return None
+
+    def _detect_change(self, new_img):
+        if self.last_screenshot is None:
+            return False
+        try:
+            size = (64, 64)
+            old_s = self.last_screenshot.resize(size)
+            new_s = new_img.resize(size)
+            diff = ImageChops.difference(old_s, new_s)
+            stat = ImageStat.Stat(diff)
+            return sum(stat.mean) / len(stat.mean) > CHANGE_THRESHOLD
+        except:
+            return False
+
+    # === ANA İŞLEM ===
+    def on_hotkey_pressed(self):
+        if self.is_running or not self.client:
+            return
+        threading.Thread(target=self._capture_and_process, daemon=True).start()
+
+    def _capture_and_process(self):
+        img = self._grab_image()
+        if img:
+            self._process_image(img)
+
+    def _wait_and_process(self):
+        """2 aşamalı algılama: Soru geldi → şıkları bekle → gönder."""
+        # Aşama 1: Soru geldi, şımdi şıkların gelmesini bekle
+        # Şıklar gelince ekran tekrar değişecek
+        base_img = self._grab_image()
+        start = time.time()
+        
+        while time.time() - start < OPTION_TIMEOUT_S:
+            time.sleep(OPTION_POLL_MS / 1000)
+            new_img = self._grab_image()
+            if new_img and base_img:
+                try:
+                    size = (64, 64)
+                    old_s = base_img.resize(size)
+                    new_s = new_img.resize(size)
+                    diff = ImageChops.difference(old_s, new_s)
+                    stat = ImageStat.Stat(diff)
+                    mean_diff = sum(stat.mean) / len(stat.mean)
+                    if mean_diff > CHANGE_THRESHOLD:
+                        # 2. değişiklik algılandı = şıklar geldi!
+                        self.root.after(0, lambda: self.log("✅ Şıklar yüklendi!"))
+                        time.sleep(0.5)  # Kısa bekleme, her şey oturmuş olsun
+                        final_img = self._grab_image()
+                        if final_img:
+                            self.last_screenshot = final_img
+                            self._process_image(final_img)
+                        return
+                except:
+                    pass
+                base_img = new_img
+        
+        # Timeout: şıklar ayrı gelmemiş olabilir, ne varsa gönder
+        self.root.after(0, lambda: self.log("⏰ Timeout — mevcut ekranla devam"))
+        img = self._grab_image()
+        if img:
+            self.last_screenshot = img
+            self._process_image(img)
+        else:
+            self.is_waiting = False
+
+    def _process_image(self, img):
+        # Rate limit kontrolü
+        elapsed = time.time() - self.last_request_time
+        if elapsed < MIN_REQUEST_INTERVAL_S:
+            wait = MIN_REQUEST_INTERVAL_S - elapsed
+            self.root.after(0, lambda w=wait: self.log(f"⏳ Rate limit bekleniyor ({w:.0f}s)"))
+            time.sleep(wait)
+
+        self.is_running = True
+        self.last_request_time = time.time()
+        self.root.after(0, lambda: self.lbl_status.config(text="⌛ DÜŞÜNÜYOR...", fg=COL_TURBO))
+        try:
+            self._next_client()  # API key rotasyonu
+            img = self.optimize_image(img)
+            img_bytes = self.pil_to_bytes(img)
+
             t0 = time.time()
-            res = self.model.generate_content(["Responde SOLO: ROJO, AZUL, AMARILLO, VERDE.", img])
+            res = self.client.models.generate_content(
+                model=self.model_name,
+                contents=[
+                    types.Content(parts=[
+                        types.Part.from_text(text=PROMPT_TR),
+                        types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
+                    ])
+                ],
+                config=types.GenerateContentConfig(
+                    temperature=0.0,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0)
+                )
+            )
             txt = res.text.strip().upper()
             dt = time.time() - t0
-            
-            self.root.after(0, lambda: self.log(f"🤖 ({dt:.2f}s): {txt}"))
-            
+
+            self.root.after(0, lambda dt=dt, txt=txt: self.log(f"🤖 ({dt:.2f}s): {txt}"))
+
+            # Soru yoksa atla
+            if "YOK" in txt:
+                self.root.after(0, lambda: self.log("⏭ Soru/şık yok, atlandı"))
+                self.is_running = False
+                self.is_waiting = False
+                return
+
             detected = None
-            if "ROJO" in txt: detected = "rojo"
-            elif "AZUL" in txt: detected = "azul"
-            elif "AMARILLO" in txt: detected = "amarillo"
-            elif "VERDE" in txt: detected = "verde"
-            
+            if "KIRMIZI" in txt: detected = "rojo"
+            elif "MAVI" in txt: detected = "azul"
+            elif "SARI" in txt: detected = "amarillo"
+            elif "YESIL" in txt: detected = "verde"
+
             if detected and self.button_coords[detected]:
-                self.root.after(0, lambda: self.lbl_status.config(text=f"CLICK {detected.upper()}", fg=COL_ACCENT))
+                color_tr = {"rojo": "KIRMIZI", "azul": "MAVİ", "amarillo": "SARI", "verde": "YEŞİL"}
+                label = color_tr.get(detected, detected)
+                self.root.after(0, lambda l=label, d=dt: self.lbl_status.config(
+                    text=f"✔ {l} ({d:.1f}s)", fg=COL_SUCCESS))
                 pyautogui.click(self.button_coords[detected])
+                self.stats["answered"] += 1
+                self.stats["times"].append(dt)
+                self.last_answer_time = time.time()
+                self.root.after(0, self.update_stats_ui)
             else:
-                self.root.after(0, lambda: self.lbl_status.config(text="?", fg=COL_WARN))
-                
+                self.root.after(0, lambda: self.lbl_status.config(text="? RENK BULUNAMADI", fg=COL_WARN))
         except Exception as e:
-            self.root.after(0, lambda: self.log(f"Err: {e}"))
+            err_msg = str(e)
+            self.root.after(0, lambda m=err_msg: self.log(f"Hata: {m}"))
         finally:
             self.is_running = False
-            time.sleep(0.5)
-            if self.model: self.root.after(0, lambda: self.lbl_status.config(text="LISTO (K)", fg=COL_SUCCESS))
+            self.is_waiting = False
+            if self.client and not self.auto_mode:
+                self.root.after(500, lambda: self.lbl_status.config(text="HAZIR (K)", fg=COL_SUCCESS))
+
 
 if __name__ == "__main__":
-    try:
-        root = tk.Tk()
-        app = KahootBotApp(root)
-        root.mainloop()
-    except Exception as e:
-        print(f"ERROR FATAL: {e}")
+    root = tk.Tk()
+    app = KahootBotApp(root)
+    root.mainloop()
