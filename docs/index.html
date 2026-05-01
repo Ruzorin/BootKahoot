@@ -200,9 +200,12 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
 </div>
 
 <script>
-const PROMPT = 'Ekrana bak. Eğer bir Kahoot sorusu VE 4 renkli şık (kırmızı, mavi, sarı, yeşil) ' +
-  'görünüyorsa, doğru cevabın rengini SADECE tek kelime olarak yaz: KIRMIZI, MAVI, SARI veya YESIL. ' +
-  'Eğer ekranda soru veya şıklar YOKSA, sadece YOK yaz.';
+const PROMPT = 'Ekrandaki Kahoot sorusunu ve şıklarını dikkatlice oku. ' +
+  'ÖNEMLİ KURAL: Eğer ekranda henüz renkli cevap şıkları (kutu/butonlar) BELİRMEMİŞSE, sadece ve sadece BEKLE yaz. ' +
+  'Eğer renkli şıklar ekrandaysa doğru cevabı bul. ' +
+  'Soru 4 seçenekliyse SADECE şu kelimelerden BİRİNİ dön: KIRMIZI, MAVI, SARI, YESIL. ' +
+  'Eğer soru Doğru/Yanlış (True/False) sorusuysa ve sadece 2 şık varsa, Doğru cevap için MAVI, Yanlış cevap için KIRMIZI dön. ' +
+  'Asla açıklama yapma.';
 const POLL_MS = 600, CHANGE_THRESH = 12, COOLDOWN_S = 5, MAX_IMG_W = 768;
 const COLORS = {
   KIRMIZI: { bg: '#e21b3c', name: 'KIRMIZI 🔴' },
@@ -365,6 +368,12 @@ async function processWithBase64(b64){
     const answer=await askGemini(b64);
     const dt=(performance.now()-t0)/1000;
     log(`🤖 (${dt.toFixed(1)}s): ${answer}`);
+    if(answer.includes('BEKLE')){
+      log('⏳ Şıklar bekleniyor... tekrar denenecek');
+      setStatus('⏳ ŞIKLAR BEKLENİYOR','analyzing');
+      S.lastFrame=null; // Oto-mod tekrar tetiklensin
+      return;
+    }
     if(answer.includes('YOK')){log('⏭ Soru/şık yok');setStatus('HAZIR','ready');return;}
     let detected=null;
     for(const c of Object.keys(COLORS)) if(answer.includes(c)){detected=c;break;}

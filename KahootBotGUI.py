@@ -28,10 +28,14 @@ OPTION_TIMEOUT_S = 8.0        # Max bekleme süresi
 MIN_REQUEST_INTERVAL_S = 2    # Key rotasyonu sayesinde düşük tutabiliriz
 
 PROMPT_TR = (
-    "Ekrana bak. Eğer bir Kahoot sorusu VE 4 renkli şık (kırmızı, mavi, sarı, yeşil) "
-    "görünüyorsa, doğru cevabın rengini SADECE tek kelime olarak yaz: "
-    "KIRMIZI, MAVI, SARI veya YESIL. "
-    "Eğer ekranda soru veya şıklar YOKSA, sadece YOK yaz."
+    "Ekrandaki Kahoot sorusunu ve şıklarını dikkatlice oku. "
+    "ÖNEMLİ KURAL: Eğer ekranda henüz renkli cevap şıkları (kutu/butonlar) "
+    "BELİRMEMİŞSE, sadece ve sadece 'BEKLE' yaz. "
+    "Eğer renkli şıklar ekrandaysa doğru cevabı bul. "
+    "Soru 4 seçenekliyse SADECE şu kelimelerden BİRİNİ dön: KIRMIZI, MAVI, SARI, YESIL. "
+    "Eğer soru Doğru/Yanlış (True/False) sorusuysa ve sadece 2 şık varsa, "
+    "'Doğru' cevap için MAVI, 'Yanlış' cevap için KIRMIZI dön. "
+    "Asla açıklama yapma."
 )
 
 COL_BG = "#121212"
@@ -516,6 +520,15 @@ class KahootBotApp:
             dt = time.time() - t0
 
             self.root.after(0, lambda dt=dt, txt=txt: self.log(f"🤖 ({dt:.2f}s): {txt}"))
+
+            # Şıklar henüz yüklenmemiş — tıklama, oto-mod tekrar deneyecek
+            if "BEKLE" in txt:
+                self.root.after(0, lambda: self.log("⏳ Şıklar bekleniyor... tekrar denenecek"))
+                self.root.after(0, lambda: self.lbl_status.config(text="⏳ ŞIKLAR BEKLENİYOR", fg=COL_TURBO))
+                self.is_running = False
+                self.is_waiting = False
+                self.last_screenshot = None  # Bir sonraki poll'da tekrar tetiklensin
+                return
 
             # Soru yoksa atla
             if "YOK" in txt:
