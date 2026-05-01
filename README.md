@@ -1,102 +1,82 @@
 # 🚀 BootKahoot — AI-Powered Kahoot Bot
 
-> **DAÜ Yapay Zeka Zirvesi '26** için geliştirilmiş, Gemini destekli tam otomatik Kahoot yanıtlama sistemi.
-
----
-
-## 🎯 Amaç
-
-2 Mayıs 2026'da **Doğu Akdeniz Üniversitesi (DAÜ) Yapay Zeka Zirvesi**'nde düzenlenecek Kahoot yarışmalarında en yüksek sıralamayı elde etmek için tasarlanmıştır.
-
-| Yarışma | Sponsor | Ödül | Kota |
-|---------|---------|------|------|
-| Kahoot #1 | **KoopBank** | Staj İmkanı | İlk **5** kişi |
-| Kahoot #2 | **Turkcell KKTC** | Staj İmkanı | İlk **2** kişi |
-
-Bot, ekran görüntüsünü (veya kamera feed'ini) Gemini'ye gönderir, doğru cevabın rengini belirler ve otomatik olarak tıklar — tüm süreç **~3-4 saniye** içinde tamamlanır.
+> Gemini Vision destekli, tam otomatik Kahoot yanıtlama sistemi. Masaüstü ve **mobil (PWA)** desteğiyle her yerden kullanılabilir.
 
 ---
 
 ## ⚡ Özellikler
 
 ### Çekirdek
-- **Gemini Vision Entegrasyonu** — Ekran görüntüsünü veya kamera karesini Gemini'ye gönderip renk bazlı cevap alır
-- **Tam Otomatik Mod (Turbo)** — Ekran değişikliğini algılar, şıkların yüklenmesini bekler, soruyu gönderir ve otomatik tıklar
-- **Manuel Mod** — `K` tuşuyla tek seferde soru gönderme
+- **Gemini Vision AI** — Ekran görüntüsünü veya kamera karesini analiz ederek doğru cevabın rengini belirler
+- **Tam Otomatik Mod (Turbo)** — Ekran değişikliğini algılar, şıkları bekler, cevabı verir
+- **Manuel Mod** — `K` tuşuyla tek seferde tetikleme
+- **📱 Mobil PWA** — Telefon kamerasıyla projektöre/ekrana bakarak çalışır, split-screen uyumlu
 
 ### Hız & Güvenilirlik
-- **Multi-Key Rotasyon** — Birden fazla API key ile round-robin rotasyon; rate-limit'i bypass eder
-- **Pre-warm Bağlantı** — Model bağlantısı önceden ısıtılarak ilk soruda gecikme önlenir
-- **Thinking Budget = 0** — Gemini'nin düşünme aşaması devre dışı bırakılarak minimum gecikme sağlanır
-- **Görüntü Optimizasyonu** — Yüksek çözünürlüklü ekran yakalama max 768px'e küçültülür, JPEG %85 kalitede sıkıştırılır
+- **Multi-Key Rotasyon** — Birden fazla API key ile round-robin; rate-limit bypass
+- **Pre-warm Bağlantı** — İlk soruda gecikme olmaz
+- **Thinking Budget = 0** — Gemini düşünme aşaması kapalı, minimum gecikme
+- **Görüntü Optimizasyonu** — Max 768px, JPEG %85 sıkıştırma
 
 ### Algılama
-- **2 Aşamalı Ekran Değişikliği Algılama** — İlk değişiklik (soru geldi) sonrası ikinci değişiklik (şıklar yüklendi) beklenir
-- **Pixel-Level Diff** — 64×64 küçültülmüş görüntüler üzerinden ortalama fark hesaplanır (eşik: `15.0`)
-- **False-Positive Koruması** — `YOK` yanıtı ile soru olmayan ekranlar otomatik atlanır
-- **Cooldown Mekanizması** — Her cevaptan sonra 6 saniye bekleme ile çift tetikleme önlenir
+- **2 Aşamalı Değişiklik Algılama** — Soru geldi → şıklar yüklendi → gönder
+- **Pixel-Level Diff** — 64×64 küçültülmüş kareler üzerinden fark hesabı
+- **False-Positive Koruması** — Soru olmayan ekranlar otomatik atlanır
+- **Cooldown** — Çift tetikleme önlenir
 
 ### Giriş Kaynakları
-- **Ekran Yakalama** — Belirlenen alan (bbox) üzerinden `ImageGrab`
-- **Kamera (DroidCam)** — Telefonu projektöre çevirip `cv2.VideoCapture` ile kamera feed'i
-
-### Arayüz
-- **Tkinter Dark-Mode GUI** — Kompakt, always-on-top pencere
-- **Canlı İstatistikler** — Cevaplanan soru sayısı, ortalama süre, son süre
-- **Renkli Log Konsolu** — Her adım gerçek zamanlı loglanır
-- **Kalibrasyon Araçları** — Ekran alanı ve buton koordinatları görsel olarak belirlenir
+- **Ekran Yakalama** — Belirlenen alan üzerinden `ImageGrab`
+- **Kamera (DroidCam)** — Telefonu webcam olarak kullan
+- **📱 Mobil Kamera** — Arka kamera ile projektörü/ekranı tara
 
 ---
 
 ## 🛠 Kurulum
 
-### Gereksinimler
-- Python 3.10+
-- Windows (Yönetici olarak çalıştırılmalı)
-- En az 1 adet [Google AI Studio](https://aistudio.google.com/) API key'i
-
-### Bağımlılıklar
+### Masaüstü (Windows)
 
 ```bash
 pip install google-genai pyautogui keyboard pillow opencv-python
 ```
 
-### Çalıştırma
-
 ```bash
-# Yönetici (Administrator) olarak PowerShell/CMD aç
+# Yönetici (Administrator) olarak çalıştır
 python KahootBotGUI.py
 ```
 
----
+### 📱 Mobil (PWA)
 
-## 📖 Kullanım Kılavuzu
+Tarayıcıdan aç → **Ana Ekrana Ekle** ile kur:
 
-### 1. Bağlantı
-1. API key'leri gir (birden fazla key virgülle ayrılır → rate-limit bypass)
-2. Model seç (varsayılan: `gemini-2.5-flash`)
-3. **⚡ BAĞLAN** butonuna tıkla
-4. Pre-warm tamamlanana kadar bekle
+🔗 **https://ruzorin.github.io/BootKahoot/**
 
-### 2. Görüntü Kaynağı
-- **Ekran Yakalama** — Kahoot ekranının olduğu monitörü seç
-- **Kamera (DroidCam)** — Telefonu webcam olarak kullanmak için kamera numarasını ayarla
-
-### 3. Kalibrasyon
-1. **Alan Belirle** — Kahoot ekranının tamamını kapsayan dikdörtgeni seç
-2. **Butonları Eşleştir** — Sırasıyla tıkla: 🔴 Kırmızı → 🔵 Mavi → 🟡 Sarı → 🟢 Yeşil
-
-### 4. Yarışma
-| Mod | Tetikleme | Kullanım |
-|-----|-----------|----------|
-| **Manuel** | `K` tuşu | Her soru için elle tetikle |
-| **Turbo (Oto)** | Otomatik | Ekran değişikliğini algılar ve otomatik çalışır |
-
-> 💡 **İpucu:** Turbo mod için `OTO-MOD` butonunu aç ve arkana yaslan.
+> Kurulum gerekmez. HTTPS üzerinden kamera erişimi otomatik sağlanır.
 
 ---
 
-## ⚙️ Teknik Parametreler
+## 📖 Kullanım
+
+### Masaüstü
+
+1. **API key** gir (virgülle ayırarak birden fazla key ekle)
+2. **Model** seç → `gemini-2.5-flash` önerilir
+3. **⚡ BAĞLAN**
+4. **Alan Belirle** — Kahoot ekranını kapsayan dikdörtgeni çiz
+5. **Butonları Eşleştir** — Sırayla tıkla: 🔴 → 🔵 → 🟡 → 🟢
+6. `K` ile manuel veya **Turbo Mod** ile tam otomatik çalıştır
+
+### 📱 Mobil
+
+1. PWA'yı aç → API key gir → **BAĞLAN & BAŞLA**
+2. Kamerayı Kahoot ekranına/projektöre çevir
+3. **📸** ile manuel tara veya **Oto-Mod** aç
+4. Cevap rengi tüm ekranı kaplar + telefon titrer
+
+> 💡 **Split-Screen:** Samsung'da bot üstte, Kahoot altta. Cevap gelince alttan bas.
+
+---
+
+## ⚙️ Parametreler
 
 | Parametre | Değer | Açıklama |
 |-----------|-------|----------|
@@ -104,9 +84,7 @@ python KahootBotGUI.py
 | `CHANGE_THRESHOLD` | 15.0 | Pixel fark eşiği |
 | `AUTO_COOLDOWN_S` | 6.0s | Cevap sonrası bekleme |
 | `IMG_MAX_WIDTH` | 768px | Gönderilen görüntü max genişliği |
-| `OPTION_POLL_MS` | 400ms | Şık yükleme kontrol aralığı |
 | `OPTION_TIMEOUT_S` | 8.0s | Şık bekleme zaman aşımı |
-| `MIN_REQUEST_INTERVAL_S` | 2s | API istekleri arası minimum süre |
 | `temperature` | 0.0 | Deterministik çıktı |
 | `thinking_budget` | 0 | Düşünme süresi yok |
 
@@ -116,53 +94,43 @@ python KahootBotGUI.py
 
 ```
 kahoot/
-├── KahootBotGUI.py      # Masaüstü uygulama (Tkinter GUI + bot)
-├── kahoot_config.json    # Kalibrasyon ve API ayarları (otomatik kaydedilir)
-├── docs/                 # 📱 Mobil PWA (GitHub Pages)
+├── KahootBotGUI.py      # Masaüstü uygulama (Tkinter GUI)
+├── kahoot_config.json    # Ayarlar (otomatik kaydedilir)
+├── docs/                 # 📱 Mobil PWA
 │   ├── index.html        # Tek dosyalık tam PWA
 │   ├── manifest.json     # PWA manifest
-│   └── sw.js             # Service Worker (offline + kurulum)
-└── README.md             # Bu dosya
+│   └── sw.js             # Service Worker
+└── README.md
 ```
 
 ---
 
 ## 🔑 API Key Stratejisi
 
-Bot, rate-limit sorunlarını aşmak için **multi-key round-robin rotasyon** kullanır:
+Birden fazla Gemini API key'i virgülle ayrılarak girilir. Bot, round-robin ile her istekte farklı key kullanır:
 
 ```
-Key1 → Key2 → Key3 → Key4 → Key5 → Key6 → Key1 → ...
+Key1 → Key2 → Key3 → ... → Key1 → ...
 ```
 
-Her istek farklı bir key üzerinden gider. Bu sayede tek key'e düşen yük azalır ve dakikadaki istek limiti pratikte `N × limit` olur.
-
-> ⚠️ `kahoot_config.json` dosyasındaki API key'leri commit etmeden önce temizle!
+Rate-limit pratikte `N × limit` olur. Key'ler [Google AI Studio](https://aistudio.google.com/)'dan ücretsiz alınabilir.
 
 ---
 
 ## 🏗 Mimari
 
 ```
-┌─────────────────────────────────────────────┐
-│                  GUI (Tkinter)               │
-│  ┌──────────┐  ┌──────────┐  ┌───────────┐  │
-│  │ Bağlantı │  │Kalibrasyon│  │ Turbo Mod │  │
-│  └────┬─────┘  └────┬─────┘  └─────┬─────┘  │
-│       │              │              │        │
-│  ┌────▼──────────────▼──────────────▼────┐   │
-│  │          Olay Döngüsü (Poll)          │   │
-│  │  1. Ekran değişikliği algıla          │   │
-│  │  2. Şıkların yüklenmesini bekle       │   │
-│  │  3. Görüntüyü optimize et             │   │
-│  │  4. Gemini'ye gönder (key rotasyon)   │   │
-│  │  5. Renk çıktısını parse et           │   │
-│  │  6. pyautogui ile otomatik tıkla      │   │
-│  └───────────────────────────────────────┘   │
-│                                              │
-│  Kaynaklar: ImageGrab | cv2.VideoCapture     │
-│  AI Motor:  google-genai (Gemini Vision)     │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│          Masaüstü (Tkinter GUI)          │
+│  Ekran Yakalama / DroidCam → Gemini →   │
+│  Renk Parse → pyautogui ile otomatik tık │
+└──────────────────────────────────────────┘
+
+┌──────────────────────────────────────────┐
+│          Mobil PWA (Tarayıcı)            │
+│  Arka Kamera → Gemini REST API →        │
+│  Tam ekran renk gösterimi + titreşim     │
+└──────────────────────────────────────────┘
 ```
 
 ---
@@ -172,60 +140,18 @@ Her istek farklı bir key üzerinden gider. Bu sayede tek key'e düşen yük aza
 | Metrik | Değer |
 |--------|-------|
 | Gemini yanıt süresi | ~2-4 saniye |
-| Otomatik tıklama | <10ms |
-| Toplam gecikme (algılama → tıklama) | ~3-5 saniye |
-| Başarı oranı (doğru renk) | ~%85-95 |
-
----
-
-## 📱 Mobil Versiyon (PWA)
-
-Bilgisayar yerine **sadece telefonla** yarışmak için mobil PWA versiyonu `docs/` klasöründedir.
-
-### Özellikler
-- 📷 **Arka kamera** ile projektör/ekrandaki soruyu yakalar
-- 🤖 **Gemini Vision API** ile cevabı analiz eder
-- 🎨 **Tam ekran renk gösterimi** — cevap rengi ekranı kaplar
-- 📳 **Titreşim geri bildirimi** — cevap geldiğinde telefon titrer
-- 🔄 **Oto-Mod** — ekran değişikliğini algılayıp otomatik analiz eder
-- 🔑 **Multi-key rotasyon** — masaüstü versiyondaki gibi round-robin
-- 📱 **Split-screen uyumlu** — Samsung'da üstte bot, altta Kahoot
-
-### Kullanım (Split-Screen)
-1. Telefona Kahoot'u aç (Chrome)
-2. PWA'yı aç (Samsung Internet veya başka tarayıcı)
-3. Samsung split-screen: **bot üstte, Kahoot altta**
-4. Telefonu projektöre çevir
-5. **📸 butona bas** veya **Oto-Mod aç**
-6. Cevap rengi üst yarıda görünür → alttan Kahoot'ta bas
-
-### Deploy (GitHub Pages)
-```bash
-git add docs/
-git commit -m "Add mobile PWA"
-git push origin main
-```
-GitHub → **Settings** → **Pages** → Source: `main` / `/docs` → **Save**
-
-Birkaç dakika sonra erişim: `https://ruzorin.github.io/BootKahoot/`
-
-> 💡 Telefonda bu URL'yi aç → **Ana Ekrana Ekle** ile PWA olarak kur
-
----
-
-## ⚠️ Sorumluluk Reddi
-
-Bu proje **eğitim ve araştırma amaçlıdır**. Kahoot kullanım koşullarına ve yarışma kurallarına uygunluk kullanıcının sorumluluğundadır. Yazarlar herhangi bir olumsuz sonuçtan sorumlu tutulamaz.
+| Otomatik tıklama (masaüstü) | <10ms |
+| Toplam gecikme | ~3-5 saniye |
 
 ---
 
 ## 📜 Lisans
 
-MIT License — Detaylar için `LICENSE` dosyasına bakın.
+MIT License
 
 ---
 
 <p align="center">
-  <b>🤖 BootKahoot — DAÜ AI Summit '26</b><br>
-  <i>Staj fırsatını yakala, yapay zeka seni tıklasın.</i>
+  <b>🤖 BootKahoot</b><br>
+  <i>Yapay zeka seni tıklasın.</i>
 </p>
