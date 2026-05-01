@@ -207,7 +207,7 @@ git push origin main
 ```
 GitHub → **Settings** → **Pages** → Source: `main` / `/docs` → **Save**
 
-Birkaç dakika sonra erişim: `https://hexab1t3.github.io/BootKahoot/`
+Birkaç dakika sonra erişim: `https://ruzorin.github.io/BootKahoot/`
 
 > 💡 Telefonda bu URL'yi aç → **Ana Ekrana Ekle** ile PWA olarak kur
 
